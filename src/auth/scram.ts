@@ -34,24 +34,30 @@ function base64ToBytes(b64: string): Uint8Array {
 
 // The DOM lib types crypto.subtle inputs as `BufferSource`, whose byte-view
 // form is `ArrayBufferView<ArrayBuffer>`; a bare `Uint8Array` widens to
-// `Uint8Array<ArrayBufferLike>` and no longer matches. Our arrays are always
-// ArrayBuffer-backed, so cast at the boundary.
-const bs = (u: Uint8Array): BufferSource => u as unknown as BufferSource;
+// `Uint8Array<ArrayBufferLike>` (allowing SharedArrayBuffer) and no longer
+// matches. Hand subtle a fresh, exactly-sized ArrayBuffer instead — that
+// sidesteps the generic entirely with no cast, and is type-safe because a
+// `new Uint8Array(n)` is always `ArrayBuffer`-backed.
+function ab(u: Uint8Array): ArrayBuffer {
+  const copy = new Uint8Array(u.byteLength);
+  copy.set(u);
+  return copy.buffer;
+}
 
 async function hmacSHA256(key: Uint8Array, msg: Uint8Array): Promise<Uint8Array> {
   const k = await crypto.subtle.importKey(
     "raw",
-    bs(key),
+    ab(key),
     { name: "HMAC", hash: "SHA-256" },
     false,
     ["sign"],
   );
-  const sig = await crypto.subtle.sign("HMAC", k, bs(msg));
+  const sig = await crypto.subtle.sign("HMAC", k, ab(msg));
   return new Uint8Array(sig);
 }
 
 async function sha256(msg: Uint8Array): Promise<Uint8Array> {
-  return new Uint8Array(await crypto.subtle.digest("SHA-256", bs(msg)));
+  return new Uint8Array(await crypto.subtle.digest("SHA-256", ab(msg)));
 }
 
 async function pbkdf2SHA256(
@@ -59,11 +65,11 @@ async function pbkdf2SHA256(
   salt: Uint8Array,
   iterations: number,
 ): Promise<Uint8Array> {
-  const k = await crypto.subtle.importKey("raw", bs(password), "PBKDF2", false, [
+  const k = await crypto.subtle.importKey("raw", ab(password), "PBKDF2", false, [
     "deriveBits",
   ]);
   const bits = await crypto.subtle.deriveBits(
-    { name: "PBKDF2", salt: bs(salt), iterations, hash: "SHA-256" },
+    { name: "PBKDF2", salt: ab(salt), iterations, hash: "SHA-256" },
     k,
     256, // 32 bytes
   );
