@@ -84,7 +84,10 @@ export async function openWebSocket(url: string, cfg: NeonConfig): Promise<WsSoc
     typeof g.WebSocketPair !== "undefined" ||
     (typeof g.navigator !== "undefined" && g.navigator?.userAgent === "Cloudflare-Workers");
   if (isWorkers && typeof g.fetch === "function") {
-    const resp = (await g.fetch(url, { headers: { Upgrade: "websocket" } })) as {
+    // Cloudflare Workers' fetch-upgrade needs an http(s):// URL, not ws(s)://
+    // (workerd rejects a ws(s):// scheme with "Fetch API cannot load").
+    const httpUrl = url.replace(/^wss:/i, "https:").replace(/^ws:/i, "http:");
+    const resp = (await g.fetch(httpUrl, { headers: { Upgrade: "websocket" } })) as {
       webSocket?: AcceptedWebSocket;
     };
     const socket = resp.webSocket;

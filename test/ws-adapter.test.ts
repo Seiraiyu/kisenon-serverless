@@ -56,6 +56,33 @@ describe("openWebSocket — injected constructor (branch 1)", () => {
   });
 });
 
+describe("openWebSocket — Cloudflare Workers fetch-upgrade (branch 2)", () => {
+  test("upgrades via fetch with an http(s):// URL, not ws(s)://", async () => {
+    let fetchedUrl: string | undefined;
+    const socket = {
+      accept: vi.fn(),
+      addEventListener: vi.fn(),
+      send: vi.fn(),
+      close: vi.fn(),
+    };
+    // A non-undefined WebSocketPair marks the runtime as Cloudflare Workers.
+    vi.stubGlobal("WebSocketPair", function WebSocketPair() {});
+    vi.stubGlobal("fetch", async (u: string) => {
+      fetchedUrl = u;
+      return { webSocket: socket };
+    });
+
+    const cfg: NeonConfig = { ...neonConfig };
+    delete cfg.webSocketConstructor;
+
+    await openWebSocket("wss://ep.usc1.kisenon.com/v2", cfg);
+
+    // workerd rejects ws(s):// — the adapter must convert the scheme.
+    expect(fetchedUrl).toBe("https://ep.usc1.kisenon.com/v2");
+    expect(socket.accept).toHaveBeenCalled();
+  });
+});
+
 describe("openWebSocket — no outbound WebSocket (branch 4)", () => {
   test("throws the exact actionable no-WS error", async () => {
     vi.stubGlobal("WebSocket", undefined);
