@@ -1,6 +1,6 @@
 {
   "name": "@kisenon/serverless",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Serverless/edge Postgres client for kisenon — a drop-in @neondatabase/serverless swap over HTTP and WebSocket.",
   "type": "module",
   "sideEffects": false,
@@ -15,9 +15,16 @@
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "files": ["dist"],
-  "engines": { "node": ">=18" },
-  "repository": { "type": "git", "url": "git+https://github.com/Seiraiyu/kisenon-serverless.git" },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Seiraiyu/kisenon-serverless.git"
+  },
   "license": "MIT",
   "packageManager": "pnpm@9.12.0",
   "scripts": {
