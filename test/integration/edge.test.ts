@@ -38,8 +38,22 @@ describe.skipIf(!hasDatabaseUrl)("Edge integration (10.4)", () => {
   });
 
   it("WS: pool.connect() throws the exact no-WS error (no outbound WS)", async () => {
-    const pool = new Pool({ connectionString: await getDatabaseUrl() });
-    await expect(pool.connect()).rejects.toThrow(NO_WS_ERROR);
-    await pool.end();
+    // Real Vercel Edge has no outbound WebSocket. The vitest edge-runtime VM,
+    // unlike real Edge, exposes a WebSocket global — strip both WS mechanisms so
+    // the adapter falls to branch 4 (throw), which is the contract Edge callers
+    // actually hit. (assign-undefined, not delete: some globals are non-config.)
+    const g = globalThis as Record<string, unknown>;
+    const savedWS = g.WebSocket;
+    const savedPair = g.WebSocketPair;
+    g.WebSocket = undefined;
+    g.WebSocketPair = undefined;
+    try {
+      const pool = new Pool({ connectionString: await getDatabaseUrl() });
+      await expect(pool.connect()).rejects.toThrow(NO_WS_ERROR);
+      await pool.end();
+    } finally {
+      g.WebSocket = savedWS;
+      g.WebSocketPair = savedPair;
+    }
   });
 });
