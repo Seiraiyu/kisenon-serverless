@@ -76,7 +76,9 @@ export function parseConnectionString(s: string): ConnectionConfig {
     // URL keeps userinfo percent-encoded; decode to the wire value.
     user: safeDecode(u.username),
     password: safeDecode(u.password),
-    database: u.pathname.replace(/^\//, ""),
+    // pathname keeps `%XX` escapes (WHATWG URL does not decode them); decode to
+    // the wire database name, matching the Go server's net/url `.Path`.
+    database: safeDecode(u.pathname.replace(/^\//, "")),
     // sslmode=disable -> plaintext; anything else (incl. absent) -> TLS.
     ssl: sslmode !== "disable",
   };

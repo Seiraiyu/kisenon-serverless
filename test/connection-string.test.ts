@@ -5,6 +5,15 @@ import {
 } from "../src/connection-string.js";
 
 describe("parseConnectionString (task 2.1)", () => {
+  test("percent-encoded database name is decoded (matches server net/url .Path)", () => {
+    // Regression: user/password were decoded but the db name was left raw; a
+    // %-escaped db name would feed a literally-wrong name into the WS Startup.
+    expect(parseConnectionString("postgres://u:p@host.example.com/my%20db").database).toBe(
+      "my db",
+    );
+    expect(parseConnectionString("postgres://u:p@h/a%2Fb").database).toBe("a/b");
+  });
+
   test("parses postgres URL", () => {
     const c = parseConnectionString(
       "postgres://u:p%40ss@ep-x1.usc1.kisenon.com/appdb?sslmode=require&options=endpoint%3Dep-x1",
