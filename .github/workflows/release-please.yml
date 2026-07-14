@@ -19,7 +19,7 @@ jobs:
           release-type: node
   publish:
     needs: release-please
-    if: ${{ needs.release-please.outputs.release_created || github.event_name == 'workflow_dispatch' }}
+    if: ${{ needs.release-please.outputs.release_created }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
