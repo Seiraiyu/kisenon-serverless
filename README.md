@@ -10,7 +10,7 @@ npm i @kisenon/serverless
 
 ## Quickstart
 
-Point `DATABASE_URL` at your endpoint host — `<eid>.usc1.kisenon.com` — and query:
+Point `DATABASE_URL` at your endpoint host — `<eid>.<region>.kisenon.com` (currently `usc1`, e.g. `ep-x1.usc1.kisenon.com`) — and query:
 
 ```ts
 import { neon } from "@kisenon/serverless";
@@ -141,11 +141,11 @@ The surface is 1:1 — swap the import specifier and your call-sites are unchang
 |---|---|
 | `import { neon, Pool, Client, neonConfig } from "@neondatabase/serverless"` | `import { neon, Pool, Client, neonConfig } from "@kisenon/serverless"` |
 | every call-site | unchanged (surface is 1:1) |
-| `DATABASE_URL` host | `<eid>.usc1.kisenon.com` (no `api.` host) |
+| `DATABASE_URL` host | your endpoint's host verbatim — `<eid>.<region>.kisenon.com` (currently `usc1`; no `api.` host) |
 
 Notes:
 
-- **Use `@kisenon/serverless`, not the stock driver.** The unmodified `@neondatabase/serverless` does **not** work against a kisenon endpoint — it rewrites the host to an `api.<region>` form for its HTTP path and pipelines cleartext auth over WS, neither of which kisenon serves. `@kisenon/serverless` keeps your host **verbatim** (`<eid>.usc1.kisenon.com`, no `api.` rewrite) and does its own md5 / SCRAM handshake. It is the supported client.
+- **Use `@kisenon/serverless`, not the stock driver.** The unmodified `@neondatabase/serverless` does **not** work against a kisenon endpoint — it rewrites the host to an `api.<region>` form for its HTTP path and pipelines cleartext auth over WS, neither of which kisenon serves. `@kisenon/serverless` keeps your host **verbatim** (`<eid>.<region>.kisenon.com`, no `api.` rewrite) — so it is region-agnostic by construction and works for any region your endpoint lives in — and does its own md5 / SCRAM handshake. It is the supported client.
 - **`kisenon()` is an identical brand alias for `neon()`** — `import { kisenon } from "@kisenon/serverless"` and use it exactly like `neon()` if you prefer the branded name.
 - **`neonConfig.pipelineConnect` is accepted but a no-op** (we never pipeline cleartext auth). `fetchConnectionCache` is likewise accepted and always-on.
 - **Auth:** both `md5` and `scram-sha-256` are supported, computed client-side against RFC vectors (server-independent).
