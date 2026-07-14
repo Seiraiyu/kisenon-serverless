@@ -1,0 +1,11 @@
+# Minimal Worker config for the Phase 10 Workers integration test
+# (`@cloudflare/vitest-pool-workers`, run via `pnpm test:workers`). No Worker is
+# deployed from this repo — this only supplies the compatibility settings the
+# test Worker runs under. `nodejs_compat` is enabled so the client's web-standard
+# code runs unchanged in workerd; the endpoint URL is injected as a binding by
+# vitest.workers.config.ts, not declared here.
+
+name = "kisenon-serverless-integration"
+main = "test/integration/workers.test.ts"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
