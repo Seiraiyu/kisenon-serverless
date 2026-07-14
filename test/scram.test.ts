@@ -180,7 +180,7 @@ function makeServerIO(
         serverFirst,
       );
       const sig = new Uint8Array(expectedServerSig);
-      if (opts.badSig) sig[0] ^= 0xff;
+      if (opts.badSig) sig[0] = (sig[0] ?? 0) ^ 0xff;
       const v = btoa(String.fromCharCode(...sig));
       return { authType: 12, body: utf8.encode("v=" + v) };
     }
