@@ -14,6 +14,7 @@ import { md5AuthResponse } from "../auth/md5.js";
 import { runScram, type ScramIO } from "../auth/scram.js";
 import { getTypeParser } from "../types/parsers.js";
 import { DatabaseError } from "../http/errors.js";
+import { paramToText } from "../param-text.js";
 import {
   MessageReassembler,
   buildBind,
@@ -386,7 +387,6 @@ function assembleResult(
 
 /** Encode one bind parameter as wire TEXT bytes (null → SQL NULL). */
 function encodeParam(p: unknown): Uint8Array | null {
-  if (p === null || p === undefined) return null;
-  const s = typeof p === "string" ? p : String(p);
-  return new TextEncoder().encode(s);
+  const text = paramToText(p);
+  return text === null ? null : new TextEncoder().encode(text);
 }

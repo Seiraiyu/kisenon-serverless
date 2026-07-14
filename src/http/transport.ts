@@ -10,6 +10,7 @@
 import type { ConnectionConfig } from "../connection-string.js";
 import type { NeonConfig } from "../config.js";
 import { DatabaseError, mapHttpError } from "./errors.js";
+import { paramToText } from "../param-text.js";
 
 /** A single query for the `{query,params,types?}` body. */
 export interface SqlRequest {
@@ -37,36 +38,19 @@ const MAX_ATTEMPTS = 5;
 const BACKOFF_BASE_MS = 200;
 const BACKOFF_CAP_MS = 3000;
 
-const HEX = "0123456789abcdef";
-
-/** Lowercase `\x…` hex encoding of a byte array (Postgres bytea input form). */
-function toHex(bytes: Uint8Array): string {
-  let out = "\\x";
-  for (let i = 0; i < bytes.length; i++) {
-    const b = bytes[i]!;
-    out += HEX[b >> 4]! + HEX[b & 0x0f]!;
-  }
-  return out;
-}
-
 /**
- * Serialize one query param to a JSON value the server text-casts (matches the
- * server's `paramsToText`): `Date`→ISO string, byte array→`\x…`, `bigint`→
- * decimal string, object/array→JSON string, `null`/`undefined`→`null`; numbers,
- * booleans and strings pass through.
+ * Serialize one query param for the HTTP JSON body. Primitives stay native
+ * (preserving the wire shape); everything else routes through the shared
+ * Postgres-text serializer (`Date`→ISO, byte array→`\x…`, `bigint`→decimal,
+ * object/array→JSON) so the HTTP and WS paths cannot diverge. `null`/`undefined`
+ * → `null`.
  */
 function serializeParam(v: unknown): unknown {
   if (v === null || v === undefined) return null;
-  if (v instanceof Date) return v.toISOString();
-  if (v instanceof Uint8Array) return toHex(v);
-  if (ArrayBuffer.isView(v)) {
-    const view = v as ArrayBufferView;
-    return toHex(new Uint8Array(view.buffer, view.byteOffset, view.byteLength));
+  if (typeof v === "number" || typeof v === "boolean" || typeof v === "string") {
+    return v;
   }
-  if (v instanceof ArrayBuffer) return toHex(new Uint8Array(v));
-  if (typeof v === "bigint") return v.toString();
-  if (typeof v === "object") return JSON.stringify(v);
-  return v;
+  return paramToText(v);
 }
 
 function serializeRequest(req: SqlRequest): SqlRequest {

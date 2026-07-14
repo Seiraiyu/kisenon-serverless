@@ -221,6 +221,35 @@ describe("sessionQuery (7.4)", () => {
     expect(res.command).toBe("SELECT");
   });
 
+  test("extended protocol: bytea param binds as \\x hex, not String()", async () => {
+    // Regression for the WS param-encoding bug: a Uint8Array param must go on the
+    // wire as the Postgres text literal \x48656c6c6f, not "72,101,108,108,111".
+    const sends: Uint8Array[] = [];
+    const conn = await boot((data, seq, emit) => {
+      sends.push(data);
+      if (seq === 0) {
+        emit(concat(authOk(), readyForQuery("I")));
+      } else if (data[0] === 0x53 /* 'S' Sync */) {
+        emit(
+          concat(
+            beMsg(0x31, new Uint8Array(0)), // ParseComplete
+            beMsg(0x32, new Uint8Array(0)), // BindComplete
+            rowDescription([{ name: "b", oid: 17 }]),
+            dataRow(["\\x48656c6c6f"]),
+            commandComplete("SELECT 1"),
+            readyForQuery("I"),
+          ),
+        );
+      }
+    });
+    await sessionQuery(conn, "SELECT $1 AS b", [
+      new Uint8Array([0x48, 0x65, 0x6c, 0x6c, 0x6f]),
+    ]);
+    const wire = sends.map((d) => String.fromCharCode(...d)).join("");
+    expect(wire).toContain("\\x48656c6c6f");
+    expect(wire).not.toContain("72,101,108,108,111");
+  });
+
   test("ErrorResponse throws DatabaseError", async () => {
     const conn = await boot((data, seq, emit) => {
       if (seq === 0) {
