@@ -13,6 +13,7 @@ import type { Field, PgResult } from "../result.js";
 import { md5AuthResponse } from "../auth/md5.js";
 import { runScram, type ScramIO } from "../auth/scram.js";
 import { getTypeParser } from "../types/parsers.js";
+import { DatabaseError } from "../http/errors.js";
 import {
   MessageReassembler,
   buildBind,
@@ -26,6 +27,7 @@ import {
   parseCommandComplete,
   parseDataRow,
   parseErrorResponse,
+  parseNotification,
   parseRowDescription,
   type FieldDescription,
   type PgWireError,
@@ -46,26 +48,28 @@ const MSG_COMMAND_COMPLETE = 0x43; // 'C'
 const MSG_PARSE_COMPLETE = 0x31; // '1'
 const MSG_BIND_COMPLETE = 0x32; // '2'
 const MSG_EMPTY_QUERY = 0x49; // 'I' EmptyQueryResponse
+const MSG_NOTIFICATION = 0x41; // 'A' NotificationResponse (LISTEN/NOTIFY)
 
 const TEXT_DECODER = new TextDecoder();
 
+/** LISTEN/NOTIFY payload surfaced via the `PoolClient` "notification" event. */
+export interface Notification {
+  processId: number;
+  channel: string;
+  payload: string;
+}
+
 /**
- * A Postgres ErrorResponse ('E') surfaced as a throwable, carrying the parsed
- * SQLSTATE and message fields (pg `DatabaseError`-shaped).
+ * Build the canonical {@link DatabaseError} (from `src/http/errors.ts`, so the
+ * whole package throws ONE error type) from a wire ErrorResponse ('E').
  */
-export class DatabaseError extends Error {
-  readonly severity: string;
-  readonly code: string;
-  readonly detail: string;
-  readonly hint: string;
-  constructor(e: PgWireError) {
-    super(e.message || `postgres error ${e.code}`);
-    this.name = "DatabaseError";
-    this.severity = e.severity;
-    this.code = e.code;
-    this.detail = e.detail;
-    this.hint = e.hint;
-  }
+function pgError(e: PgWireError): DatabaseError {
+  const err = new DatabaseError(e.message || `postgres error ${e.code}`);
+  if (e.code) err.code = e.code;
+  if (e.severity) err.severity = e.severity;
+  if (e.detail) err.detail = e.detail;
+  if (e.hint) err.hint = e.hint;
+  return err;
 }
 
 /** Post-boot session facts captured while draining to the first ReadyForQuery. */
@@ -175,7 +179,7 @@ export async function startSession(
   while (!authDone) {
     const msg = await conn.nextMessage();
     if (msg.type === MSG_ERROR) {
-      throw new DatabaseError(parseErrorResponse(msg.body));
+      throw pgError(parseErrorResponse(msg.body));
     }
     if (msg.type !== MSG_AUTH) {
       throw new Error(`kisenon: unexpected message 0x${msg.type.toString(16)} during authentication`);
@@ -228,7 +232,7 @@ export async function startSession(
         state.transactionStatus = msg.body.length > 0 ? msg.body[0]! : 0x49;
         return state;
       case MSG_ERROR:
-        throw new DatabaseError(parseErrorResponse(msg.body));
+        throw pgError(parseErrorResponse(msg.body));
       default:
         break; // tolerate anything else pre-ReadyForQuery
     }
@@ -249,7 +253,7 @@ function scramIO(conn: WireConnection, first: RawMessage): ScramIO {
       const msg = pending ?? (await conn.nextMessage());
       pending = null;
       if (msg.type === MSG_ERROR) {
-        throw new DatabaseError(parseErrorResponse(msg.body));
+        throw pgError(parseErrorResponse(msg.body));
       }
       if (msg.type !== MSG_AUTH) {
         throw new Error(`kisenon: expected Authentication message, got 0x${msg.type.toString(16)}`);
@@ -277,12 +281,15 @@ function readParameterStatus(body: Uint8Array): [string, string] {
  * simple protocol (Query; collect T,D*,C,Z). With params → extended protocol
  * (Parse/Bind/Describe/Execute/Sync; collect 1,2,T,D*,C,Z). Row values are
  * type-parsed from wire TEXT via `getTypeParser(field.dataTypeID)`. Throws
- * {@link DatabaseError} on an ErrorResponse.
+ * {@link DatabaseError} on an ErrorResponse. An out-of-band NotificationResponse
+ * ('A') seen while draining is routed to `onNotification` (never mistaken for
+ * query output) and draining continues.
  */
 export async function sessionQuery(
   conn: WireConnection,
   text: string,
   params?: unknown[],
+  onNotification?: (n: Notification) => void,
 ): Promise<PgResult> {
   if (params && params.length > 0) {
     conn.send(buildParse("", text, []));
@@ -324,8 +331,11 @@ export async function sessionQuery(
         break;
       case MSG_NOTICE:
         break; // ignorable
+      case MSG_NOTIFICATION: // 'A' — out-of-band LISTEN/NOTIFY, not query output
+        onNotification?.(parseNotification(msg.body));
+        break;
       case MSG_ERROR:
-        throw new DatabaseError(parseErrorResponse(msg.body));
+        throw pgError(parseErrorResponse(msg.body));
       case MSG_READY:
         return assembleResult(fields, rawRows, command, commandRowCount, sawCommandComplete);
       default:

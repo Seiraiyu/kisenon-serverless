@@ -39,11 +39,22 @@ describe("Pool", () => {
     expect(res).toHaveProperty("command");
   });
 
-  test("connect() throws the Phase 8 placeholder", async () => {
-    const pool = new Pool(CONN);
-    await expect(pool.connect()).rejects.toThrow(
-      "pool.connect() WebSocket sessions are implemented in Phase 8",
-    );
+  test("connect() with no outbound WebSocket rejects with the actionable no-WS error", async () => {
+    // Happy-path connect() over a pinned WS session is covered in pool-ws.test.ts;
+    // here assert the WS-absent runtime (e.g. Vercel Edge) surfaces the adapter's
+    // actionable error rather than a stray placeholder.
+    vi.stubGlobal("WebSocket", undefined);
+    vi.stubGlobal("WebSocketPair", undefined);
+    vi.stubGlobal("navigator", undefined);
+    try {
+      const pool = new Pool(CONN);
+      await expect(pool.connect()).rejects.toThrow(
+        "No WebSocket implementation: this runtime has no outbound WebSocket (e.g. Vercel Edge). " +
+          "Use the HTTP path (neon()/pool.query) or set neonConfig.webSocketConstructor.",
+      );
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   test("end() resolves and emits 'end'", async () => {
