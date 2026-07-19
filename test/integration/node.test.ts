@@ -1,5 +1,5 @@
 // Node integration test (Phase 10, task 10.2) — exercises the full surface
-// against a LIVE endpoint from the Node runtime. Skips cleanly when no
+// against a LIVE endpoint from the Node runtime. Local runs skip when no
 // DATABASE_URL is configured (see ./provision.ts).
 //
 // HTTP path: `neon()` tagged template, `Pool.query` one-shot, parameterized

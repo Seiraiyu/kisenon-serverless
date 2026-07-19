@@ -6,8 +6,8 @@
 // .accept()` branch (src/ws/adapter.ts, branch 2). Run: `pnpm test:workers`.
 //
 // The endpoint URL arrives as a Worker binding (`env.DATABASE_URL`), wired in
-// vitest.workers.config.ts from the host process env, so the suite skips
-// cleanly when no endpoint is configured.
+// vitest.workers.config.ts from the host process env. Local runs may skip when
+// it is absent; automation can require it through REQUIRE_INTEGRATION=1.
 
 import { env } from "cloudflare:test";
 import { describe, expect, it } from "vitest";

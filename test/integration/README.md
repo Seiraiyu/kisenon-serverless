@@ -3,7 +3,8 @@
 Cross-runtime tests that exercise the client against a **live** kisenon
 endpoint over `DATABASE_URL`. They are **excluded from the default unit run**
 (`pnpm test`) — the `vitest.config.ts` `exclude` drops `test/integration/**` —
-and they **skip cleanly** (never fail) when `DATABASE_URL` is unset.
+and they skip locally when `DATABASE_URL` is unset. Set `REQUIRE_INTEGRATION=1`
+to make a missing URL fail before test discovery in automation.
 
 ## Running
 
@@ -13,6 +14,13 @@ DATABASE_URL=postgres://user:pw@<eid>.usc1.kisenon.com/db pnpm test:integration
 
 # Cloudflare Workers cells (10.3 + the Workers half of the 10.5 gate)
 DATABASE_URL=postgres://user:pw@<eid>.usc1.kisenon.com/db pnpm test:workers
+```
+
+For automation that must never pass without executing the live assertions:
+
+```sh
+REQUIRE_INTEGRATION=1 DATABASE_URL=postgres://user:pw@<eid>.usc1.kisenon.com/db pnpm test:integration
+REQUIRE_INTEGRATION=1 DATABASE_URL=postgres://user:pw@<eid>.usc1.kisenon.com/db pnpm test:workers
 ```
 
 Or put the URL in a **gitignored** `.env.integration` file and launch the
@@ -31,7 +39,8 @@ node --env-file=.env.integration ./node_modules/.bin/vitest run --config vitest.
 
 `test/integration/provision.ts` reads `DATABASE_URL` from `process.env` and
 exposes `hasDatabaseUrl` (the `describe.skipIf` gate) and
-`getDatabaseUrl()` (throws an actionable error if unset).
+`getDatabaseUrl()` (throws an actionable error if unset). Both Vitest configs
+also reject a missing URL when `REQUIRE_INTEGRATION=1`.
 
 ## What each file covers
 

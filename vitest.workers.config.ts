@@ -4,11 +4,15 @@
 //
 // `DATABASE_URL` is read from the host process env at config time and forwarded
 // into the Worker as a binding, so the in-worker test reads `env.DATABASE_URL`.
-// When unset the binding is absent and the suite skips (see workers.test.ts).
 
 import { defineWorkersConfig } from "@cloudflare/vitest-pool-workers/config";
+import { requireDatabaseUrl } from "./test/integration/require-database-url.js";
+import { versionDefine } from "./version.config.js";
+
+requireDatabaseUrl(process.env);
 
 export default defineWorkersConfig({
+  define: versionDefine,
   test: {
     include: ["test/integration/workers.test.ts"],
     poolOptions: {

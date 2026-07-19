@@ -5,7 +5,8 @@
 // This file covers the Node cells (HTTP + WS). The Workers cells of the gate
 // (HTTP + WS from workerd) live in workers.test.ts and run via
 // `pnpm test:workers` — the two runners together satisfy the design's
-// four-cell proof (HTTP+WS × Node+Workers). Skips cleanly with no DATABASE_URL.
+// four-cell proof (HTTP+WS × Node+Workers). Local runs may skip with no
+// DATABASE_URL; automation can require it through REQUIRE_INTEGRATION=1.
 //
 // TODO(#2134): wire into seiraiyu-neon scripts/verify behavior post-publish
 // (cross-repo Tier-3: the published @kisenon/serverless package run against the

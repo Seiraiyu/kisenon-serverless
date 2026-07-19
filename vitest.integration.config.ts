@@ -10,8 +10,13 @@
 // fast and endpoint-free; here we opt those files back in.
 
 import { defineConfig } from "vitest/config";
+import { requireDatabaseUrl } from "./test/integration/require-database-url.js";
+import { versionDefine } from "./version.config.js";
+
+requireDatabaseUrl(process.env);
 
 export default defineConfig({
+  define: versionDefine,
   test: {
     include: ["test/integration/**/*.test.ts"],
     exclude: ["test/integration/workers.test.ts"],

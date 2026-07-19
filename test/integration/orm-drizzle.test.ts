@@ -3,7 +3,7 @@
 // `@kisenon/serverless`'s `Pool`, with ONLY the driver import swapped
 // (`@kisenon/serverless` in place of `@neondatabase/serverless`). Drizzle drives
 // the pool through the same `pg`-shaped surface, so a `SELECT` returns typed
-// rows unchanged. Skips cleanly when no DATABASE_URL is configured.
+// rows unchanged. Local runs skip when no DATABASE_URL is configured.
 
 import { sql as dsql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/neon-serverless";

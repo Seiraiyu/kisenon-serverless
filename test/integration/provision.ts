@@ -5,8 +5,9 @@
 // gate the cross-runtime tests consult:
 //
 //   • `hasDatabaseUrl` — a synchronous boolean the tests feed to
-//     `describe.skipIf(!hasDatabaseUrl)`, so the whole suite SKIPS cleanly when
-//     no endpoint is configured (the state in CI until a URL is provided).
+//     `describe.skipIf(!hasDatabaseUrl)`, so local runs may skip when no
+//     endpoint is configured. Automation can set REQUIRE_INTEGRATION=1 to fail
+//     before discovery if DATABASE_URL is absent.
 //   • `getDatabaseUrl()` — returns the URL, or throws a clear, actionable error
 //     telling the operator exactly how to set it.
 //
@@ -37,8 +38,8 @@ function readDatabaseUrl(): string | undefined {
 
 /**
  * `true` when a live `DATABASE_URL` is configured. The cross-runtime tests use
- * this with `describe.skipIf(!hasDatabaseUrl)` so the suite skips (never fails)
- * when there is no endpoint to hit.
+ * this with `describe.skipIf(!hasDatabaseUrl)` so an unrequired local run may
+ * skip when there is no endpoint to hit.
  */
 export const hasDatabaseUrl: boolean = readDatabaseUrl() !== undefined;
 

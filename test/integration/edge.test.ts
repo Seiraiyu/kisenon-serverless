@@ -4,7 +4,7 @@
 // `edge-runtime` environment (an outbound-WebSocket-less VM). Asserts the HTTP
 // path works and that `pool.connect()` throws the EXACT actionable no-WS error
 // from src/ws/adapter.ts (branch 4) — the error that points Edge callers at the
-// HTTP transport. Skips cleanly when no DATABASE_URL is configured.
+// HTTP transport. Local runs skip when no DATABASE_URL is configured.
 //
 // This runs under `pnpm test:integration` (which uses the default runner, whose
 // per-file `@vitest-environment` docblock above selects edge-runtime). It is

@@ -2,7 +2,10 @@
 // import-swap from `@neondatabase/serverless`: `neon()` (aliased `kisenon()`),
 // `neonConfig`, `setTypeParser`, `DatabaseError`, `Pool`, and `Client`.
 
-export const VERSION = "0.0.0";
+declare const __KISENON_PACKAGE_VERSION__: string;
+
+/** Package version injected from package.json by the build/test configuration. */
+export const VERSION = __KISENON_PACKAGE_VERSION__;
 
 export { neon } from "./http/query.js";
 import { neon } from "./http/query.js";
