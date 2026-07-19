@@ -1,6 +1,6 @@
 {
   "name": "@kisenon/serverless",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Serverless/edge Postgres client for kisenon — a drop-in @neondatabase/serverless swap over HTTP and WebSocket.",
   "type": "module",
   "sideEffects": false,

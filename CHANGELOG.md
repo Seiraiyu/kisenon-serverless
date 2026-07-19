@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.1](https://github.com/Seiraiyu/kisenon-serverless/compare/v0.1.0...v0.1.1) (2026-07-19)
+
+
+### Bug Fixes
+
+* derive version and enforce live test config ([34d6f07](https://github.com/Seiraiyu/kisenon-serverless/commit/34d6f07ccc94606de3902ad1da920314e1f1a0a3))
+* **ws:** close socket on fatal frame violation ([d81385e](https://github.com/Seiraiyu/kisenon-serverless/commit/d81385ecbd4ad3007c42059765637bbea31e90a5))
+
 ## 0.1.0 (2026-07-14)
 
 
