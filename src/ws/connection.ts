@@ -119,7 +119,7 @@ export class WireConnection {
       try {
         msg = this.reassembler.next();
       } catch (e) {
-        this.fail(e instanceof Error ? e : new Error(String(e)));
+        this.fail(e instanceof Error ? e : new Error(String(e)), true);
         return;
       }
       if (!msg) break;
@@ -132,11 +132,14 @@ export class WireConnection {
     }
   }
 
-  private fail(err: Error): void {
+  private fail(err: Error, closeSocket = false): void {
     if (this.failure) return;
     this.failure = err;
     while (this.waiters.length > 0) {
       this.waiters.shift()!.reject(err);
+    }
+    if (closeSocket) {
+      this.socket.close(1002, "invalid postgres message");
     }
   }
 

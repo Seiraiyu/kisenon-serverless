@@ -75,6 +75,8 @@ type Script = (data: Uint8Array, seq: number, emit: (bytes: Uint8Array) => void)
 class FakeCompute implements WsSocket {
   readonly ready = Promise.resolve();
   readonly clientSends: Uint8Array[] = [];
+  closeCount = 0;
+  closeInfo: { code?: number; reason?: string } | null = null;
   private msgCb: ((d: Uint8Array) => void) | null = null;
   private closeCb: ((i: { code: number; reason: string }) => void) | null = null;
   constructor(private readonly script: Script) {}
@@ -89,10 +91,33 @@ class FakeCompute implements WsSocket {
   onClose(cb: (i: { code: number; reason: string }) => void): void {
     this.closeCb = cb;
   }
-  close(): void {
-    this.closeCb?.({ code: 1000, reason: "" });
+  close(code?: number, reason?: string): void {
+    this.closeCount += 1;
+    this.closeInfo = { code, reason };
+    this.closeCb?.({ code: code ?? 1000, reason: reason ?? "" });
+  }
+  emit(bytes: Uint8Array): void {
+    this.msgCb?.(bytes);
   }
 }
+
+describe("WireConnection (7.2)", () => {
+  test("closes the socket when a message exceeds the 16 MiB ceiling", async () => {
+    const fake = new FakeCompute(() => {});
+    const conn = new WireConnection(fake);
+    const next = conn.nextMessage();
+    const header = new Uint8Array(5);
+    header[0] = 0x44; // 'D'
+    new DataView(header.buffer).setUint32(1, 17 * 1024 * 1024, false);
+
+    fake.emit(header);
+
+    await expect(next).rejects.toThrow(/exceeds 16 MiB ceiling/i);
+    expect(fake.closeCount).toBe(1);
+    expect(fake.closeInfo).toEqual({ code: 1002, reason: "invalid postgres message" });
+    await expect(conn.nextMessage()).rejects.toThrow(/exceeds 16 MiB ceiling/i);
+  });
+});
 
 const cfg = (over: Partial<ConnectionConfig> = {}): ConnectionConfig => ({
   host: "ep.usc1.kisenon.com",
